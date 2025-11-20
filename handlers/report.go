@@ -117,11 +117,11 @@ func (r *ReportHandler) CreateReport(c *gin.Context) {
 
 	// Validate category
 	validCategories := map[string]bool{
-		"Stress":               true,
-		"Depresi":              true,
-		"Gangguan Kecemasan":   true,
-		"Defisit Atensi":       true,
-		"Trauma":               true,
+		"Stress":             true,
+		"Depresi":            true,
+		"Gangguan Kecemasan": true,
+		"Defisit Atensi":     true,
+		"Trauma":             true,
 	}
 	if !validCategories[category] {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category"})
