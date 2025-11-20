@@ -69,6 +69,7 @@ func main() {
 	{
 		auth.POST("/reports", h.Report.CreateReport)
 		auth.PUT("/reports/:id/handle", middleware.RequireRole("admin"), h.Report.HandleReport)
+		auth.PUT("/reports/:id/category", middleware.RequireRole("admin"), h.Report.UpdateReportCategory)
 		// admin-only list
 		auth.GET("/reports", middleware.RequireRole("admin"), h.Report.ListReports)
 	}

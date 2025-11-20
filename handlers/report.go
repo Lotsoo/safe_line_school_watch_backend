@@ -97,7 +97,7 @@ func (r *ReportHandler) CreateReport(c *gin.Context) {
 		var req struct {
 			Location    string `json:"location" binding:"required"`
 			Description string `json:"description" binding:"required"`
-			Category    string `json:"category" binding:"required"`
+			Category    string `json:"category"`
 			ImageURL    string `json:"image_url"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,22 +110,24 @@ func (r *ReportHandler) CreateReport(c *gin.Context) {
 		imageURL = req.ImageURL
 	}
 
-	if strings.TrimSpace(location) == "" || strings.TrimSpace(description) == "" || strings.TrimSpace(category) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "location, description, and category are required"})
+	if strings.TrimSpace(location) == "" || strings.TrimSpace(description) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "location and description are required"})
 		return
 	}
 
-	// Validate category
-	validCategories := map[string]bool{
-		"Stress":             true,
-		"Depresi":            true,
-		"Gangguan Kecemasan": true,
-		"Defisit Atensi":     true,
-		"Trauma":             true,
-	}
-	if !validCategories[category] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category"})
-		return
+	// Validate category if provided
+	if category != "" {
+		validCategories := map[string]bool{
+			"Stress":             true,
+			"Depresi":            true,
+			"Gangguan Kecemasan": true,
+			"Defisit Atensi":     true,
+			"Trauma":             true,
+		}
+		if !validCategories[category] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category"})
+			return
+		}
 	}
 
 	rec := models.Report{
@@ -196,6 +198,49 @@ func (r *ReportHandler) HandleReport(c *gin.Context) {
 	rec.UpdatedAt = time.Now()
 	if err := r.DB.Save(&rec).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update status"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"report": rec})
+}
+
+// UpdateReportCategory allows admin to set/update the category of a report
+func (r *ReportHandler) UpdateReportCategory(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		Category string `json:"category" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate category
+	validCategories := map[string]bool{
+		"Stress":             true,
+		"Depresi":            true,
+		"Gangguan Kecemasan": true,
+		"Defisit Atensi":     true,
+		"Trauma":             true,
+	}
+	if !validCategories[req.Category] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid category"})
+		return
+	}
+
+	var rec models.Report
+	if err := r.DB.First(&rec, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+
+	rec.Category = req.Category
+	rec.UpdatedAt = time.Now()
+	if err := r.DB.Save(&rec).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update category"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"report": rec})
